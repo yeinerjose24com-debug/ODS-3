@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>ODS 3 - Salud y Bienestar Interactivo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Estilos para tarjetas de datos */
+    .rutina-card, .plan-card, .horario-card {
+      background: white;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: all 0.2s ease;
+    }
+
+    .rutina-card:hover, .plan-card:hover, .horario-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    .rutina-card h3, .plan-card h3, .horario-card h3 {
+      color: #374151;
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .rutina-card p, .plan-card p, .horario-card p {
+      color: #6B7280;
+      margin-bottom: 0.5rem;
+    }
+
+    .rutina-card small, .plan-card small, .horario-card small {
+      color: #9CA3AF;
+      font-size: 0.875rem;
+    }
+
+    /* Contenedores de tarjetas */
+    #rutinasContainer, #planesContainer, #horariosContainer {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+      padding: 1rem 0;
+    }
+
+    /* Estilos básicos */
+    .hidden-content {
+      display: none;
+    }
+    .show-content {
+      display: block;
+    }
+    /* Toast notifications */
+    .toast-container {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    .toast {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #f3faf7;
+      color: #064e3b;
+      border: 1px solid rgba(6,78,59,0.12);
+      padding: 10px 14px;
+      border-radius: 10px;
+      box-shadow: 0 6px 18px rgba(2,6,23,0.08);
+      min-width: 220px;
+      font-weight: 600;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 260ms ease;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { background: #ecfdf5; color: #065f46; border-color: rgba(16,185,129,0.16); }
+    .toast.error { background: #fff1f2; color: #7f1d1d; border-color: rgba(220,38,38,0.12); }
+    .toast .icon { font-size: 18px; }
+  /* Tipografía y look moderno */
+  body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
+  /* Logo y banner */
+    #site-logo { height:48px; width:48px; object-fit:contain; }
+    #welcome-banner { 
+      width: 100%; 
+      height: 320px; 
+      object-fit: cover; 
+      object-position: center;
+      border-radius: 0.75rem;
+      margin: 1rem 0;
+    }
+    .section-images img { width:100%; height:160px; object-fit:cover; border-radius:0.5rem; }
+  /* Imagen fija para columnas (Rutinas / Planes / Horarios) */
+  .col-image { width:100%; height:120px; object-fit:cover; border-radius:0.5rem; margin-bottom:0.75rem; }
+
+  /* Catalog / card styles */
+  .catalog-section { background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.45)); padding:1rem; border-radius:1rem; }
+  .card { background: #ffffff; border-radius:1rem; padding:1rem; box-shadow: 0 8px 24px rgba(16,24,40,0.06); transition: transform .18s ease, box-shadow .18s ease; }
+  .card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(16,24,40,0.12); }
+  .card .col-image { border-radius:0.75rem; }
+
+  /* Buttons */
+  .btn { display:inline-flex; align-items:center; gap:0.5rem; padding:0.6rem 1rem; border-radius:0.6rem; font-weight:600; cursor:pointer; border:0; }
+  .btn-primary { background: linear-gradient(90deg,#06b6d4,#10b981); color: white; }
+  .btn-accent { background: linear-gradient(90deg,#f97316,#fb7185); color: white; }
+  .btn-blue { background: linear-gradient(90deg,#3b82f6,#06b6d4); color: white; }
+    @media(max-width:768px){ #welcome-banner { height:160px } }
+
+    /* Estilos para las secciones expandibles */
+    .info-section {
+      background: white;
+      border-radius: 1rem;
+      margin-top: 1rem;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1rem;
+    }
+    .info-card {
+      background: #f8fafc;
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      border: 1px solid #e2e8f0;
+    }
+    .info-card h3 {
+      color: #0f766e;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+    .tips-list {
+      list-style-type: none;
+      padding: 0;
+    }
+    .tips-list li {
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .tips-list li:last-child {
+      border-bottom: none;
+    }
+    .tips-list li::before {
+      content: "•";
+      color: #10b981;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body class="bg-gradient-to-br from-green-50 to-teal-100 text-gray-800 min-h-screen">
+
+  <!-- Encabezado -->
+  <header class="bg-gradient-to-r from-green-600 to-teal-600 text-white p-6 shadow-lg sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <!-- Reemplaza 'logo-placeholder.png' por la ruta de tu logo -->
+        <img id="site-logo" src="static/logo.png" alt="Logo" />
+        <h1 class="text-2xl font-bold">ODS 3 — Salud y Bienestar</h1>
+      </div>
+      <nav class="space-x-4">
+        <a href="#intro" class="hover:underline">Introducción</a>
+        <a href="#ejercicio" class="hover:underline">Ejercicio</a>
+        <a href="#alimentacion" class="hover:underline">Alimentación</a>
+        <a href="#mental" class="hover:underline">Salud Mental</a>
+        <a href="#prevencion" class="hover:underline">Prevención</a>
+        <a href="#personal" class="hover:underline">Tu Plan</a>
+        <a href="#imc" class="hover:underline">Calculadora IMC</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Banner de bienvenida: reemplaza 'welcome-placeholder.jpg' por tu imagen -->
+  <div class="max-w-6xl mx-auto p-6 pt-4">
+    <img id="welcome-banner" src="static/logo1.jpg" alt="Bienvenido" class="rounded-xl shadow-lg mx-auto" />
+  </div>
+
+  <!-- Introducción -->
+  <section id="intro" class="max-w-6xl mx-auto p-8 text-center">
+    <h2 class="text-3xl font-bold text-green-700">¿Qué es el ODS 3?</h2>
+    <p class="mt-4 text-lg text-gray-700">
+      El <b>ODS 3</b> busca garantizar una vida sana y promover el bienestar en todas las edades.
+      Esto incluye mejorar la salud física y mental, promover hábitos saludables,
+      prevenir enfermedades y asegurar el acceso universal a servicios de salud de calidad.
+    </p>
+  </section>
+
+  <!-- Ejercicio -->
+  <section id="ejercicio" class="max-w-6xl mx-auto p-6 space-y-4">
+    <button onclick="toggleContent('rutinasDefecto')"
+      class="w-full text-left bg-gradient-to-r from-teal-500 to-green-500 text-white px-4 py-3 rounded-xl shadow-md hover:shadow-xl transition-all">
+      🏋️‍♂️ Rutinas de Ejercicio
+    </button>
+    <div id="rutinasDefecto" class="hidden-content bg-white rounded-xl shadow-lg mt-2 p-4">
+      <div class="info-grid">
+        <!-- Rutinas Predeterminadas -->
+        <div class="info-card">
+          <h3>📋 Rutinas Predeterminadas</h3>
+          <ul class="tips-list">
+            <li>Principiante: Caminata 20 min + planchas 3x20s</li>
+            <li>Intermedio: Sentadillas 3x12 + trote 30 min</li>
+            <li>Avanzado: Entrenamiento HIIT 25 min</li>
+          </ul>
+        </div>
+        
+        <!-- Sugerencias -->
+        <div class="info-card">
+          <h3>💡 Sugerencias para Mejorar</h3>
+          <ul class="tips-list">
+            <li>Comienza gradualmente y aumenta la intensidad</li>
+            <li>Mantén un registro de tu progreso</li>
+            <li>Alterna entre ejercicios cardiovasculares y de fuerza</li>
+            <li>Descansa adecuadamente entre sesiones</li>
+            <li>Hidrátate antes, durante y después del ejercicio</li>
+          </ul>
+        </div>
+
+        <!-- Datos Importantes -->
+        <div class="info-card">
+          <h3>📊 Datos sobre el Ejercicio</h3>
+          <ul class="tips-list">
+            <li>30 minutos diarios mejoran la salud cardiovascular</li>
+            <li>El ejercicio reduce el riesgo de depresión en un 30%</li>
+            <li>Fortalece los huesos y previene la osteoporosis</li>
+            <li>Mejora la calidad del sueño</li>
+            <li>Aumenta la capacidad cognitiva</li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- Imagen informativa -->
+      <div class="mt-4">
+        <img src="static/info-ejercicio.jpg" alt="Info Ejercicio" class="rounded-lg w-full" style="height:200px; object-fit:cover;" />
+      </div>
+
+      <!-- Form para agregar rutinas de ejercicio personalizadas (guardado local) -->
+      <div class="mt-4">
+        <h4 class="font-semibold">Agregar rutina personalizada</h4>
+        <form id="ejercicioItemForm" class="mt-2 space-y-2">
+          <input id="ejTitle" type="text" placeholder="Título (ej. Circuito en casa)" class="w-full p-2 border rounded" required />
+          <input id="ejImage" type="text" placeholder="URL de imagen (opcional)" class="w-full p-2 border rounded" />
+          <textarea id="ejDetail" placeholder="Descripción" class="w-full p-2 border rounded" required></textarea>
+          <button type="submit" class="btn btn-primary">Guardar rutina</button>
+        </form>
+        
+        <!-- Contenedor para mostrar las rutinas guardadas -->
+        <div id="rutinasContainer" class="mt-6"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Alimentación -->
+  <section id="alimentacion" class="max-w-6xl mx-auto p-6 space-y-4">
+    <button onclick="toggleContent('alimentacionDefecto')"
+      class="w-full text-left bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-3 rounded-xl shadow-md hover:shadow-xl transition-all">
+      🍎 Alimentación Saludable
+    </button>
+    <div id="alimentacionDefecto" class="hidden-content bg-white rounded-xl shadow-lg mt-2">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
+        <img src="static/comida1.jpeg" alt="Plato saludable con quinoa" class="w-full h-64 object-cover rounded-lg shadow-md hover:shadow-xl transition-all">
+        <img src="static/comida2.jpeg" alt="Plato saludable con salmón" class="w-full h-64 object-cover rounded-lg shadow-md hover:shadow-xl transition-all">
+        <img src="static/comida3.jpeg" alt="Ensalada nutritiva" class="w-full h-64 object-cover rounded-lg shadow-md hover:shadow-xl transition-all">
+      </div>
+      <div class="info-grid">
+        <!-- Plan Diario -->
+        <div class="info-card">
+          <h3>📅 Plan Diario Saludable</h3>
+          <ul class="tips-list">
+            <li>Desayuno: Avena + frutas + yogurt</li>
+            <li>Almuerzo: Pollo a la plancha + arroz integral + ensalada</li>
+            <li>Cena: Pescado al horno + vegetales</li>
+            <li>Snacks: Frutos secos y frutas frescas</li>
+          </ul>
+        </div>
+
+        <!-- Sugerencias -->
+        <div class="info-card">
+          <h3>💡 Consejos Nutricionales</h3>
+          <ul class="tips-list">
+            <li>Come al menos 5 porciones de frutas y verduras al día</li>
+            <li>Reduce el consumo de azúcares refinados</li>
+            <li>Prioriza proteínas magras y pescados</li>
+            <li>Mantén un horario regular de comidas</li>
+            <li>Lee las etiquetas nutricionales</li>
+          </ul>
+        </div>
+
+        <!-- Datos Importantes -->
+        <div class="info-card">
+          <h3>📊 Datos Nutricionales</h3>
+          <ul class="tips-list">
+            <li>El 80% de enfermedades crónicas se relacionan con la dieta</li>
+            <li>Una buena nutrición mejora el sistema inmune</li>
+            <li>La fibra ayuda a mantener un peso saludable</li>
+            <li>Los antioxidantes previenen el envejecimiento celular</li>
+            <li>La hidratación es clave: 8 vasos de agua al día</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <img src="static/info-alimentacion.jpg" alt="Info Alimentación" class="rounded-lg w-full" style="height:200px; object-fit:cover;" />
+      </div>
+
+      <!-- Form para agregar planes de alimentación -->
+      <div class="mt-4">
+        <h4 class="font-semibold">Agregar plan / mejora</h4>
+        <form id="alimentacionItemForm" class="mt-2 space-y-2">
+          <input id="alTitle" type="text" placeholder="Título (ej. Plan para bajar azúcar)" class="w-full p-2 border rounded" required />
+          <input id="alImage" type="text" placeholder="URL de imagen (opcional)" class="w-full p-2 border rounded" />
+          <textarea id="alDetail" placeholder="Descripción" class="w-full p-2 border rounded" required></textarea>
+          <button type="submit" class="btn btn-accent">Guardar plan</button>
+        </form>
+        <div id="listaAlimentacionExtras" class="mt-3 space-y-2"></div>
+      </div>
+    </div>
+    
+  </section>
+
+  <!-- Salud Mental -->
+  <section id="mental" class="max-w-6xl mx-auto p-6 space-y-4">
+    <button onclick="toggleContent('meditacion')"
+      class="w-full text-left bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-3 rounded-xl shadow-md hover:shadow-xl transition-all">
+      🧘 Salud Mental y Meditación
+    </button>
+    <div id="meditacion" class="hidden-content bg-white rounded-xl shadow-lg mt-2">
+      <div class="info-grid">
+        <!-- Guía de Meditación -->
+        <div class="info-card">
+          <h3>🧘‍♂️ Guía de Meditación</h3>
+          <ul class="tips-list">
+            <li>Encuentra un lugar tranquilo</li>
+            <li>Siéntate cómodamente</li>
+            <li>Respira profundo (4s inhalar, 4s exhalar)</li>
+            <li>Concéntrate en tu respiración</li>
+            <li>Práctica recomendada: 10-15 min diarios</li>
+          </ul>
+        </div>
+
+        <!-- Sugerencias -->
+        <div class="info-card">
+          <h3>💡 Consejos para el Bienestar Mental</h3>
+          <ul class="tips-list">
+            <li>Mantén una rutina de sueño regular</li>
+            <li>Practica la gratitud diariamente</li>
+            <li>Limita el uso de redes sociales</li>
+            <li>Cultiva relaciones positivas</li>
+            <li>Busca ayuda profesional cuando lo necesites</li>
+          </ul>
+        </div>
+
+        <!-- Datos Importantes -->
+        <div class="info-card">
+          <h3>📊 Datos sobre Salud Mental</h3>
+          <ul class="tips-list">
+            <li>La meditación reduce el estrés en un 40%</li>
+            <li>El ejercicio mejora los síntomas de ansiedad</li>
+            <li>8 horas de sueño fortalecen la memoria</li>
+            <li>La naturaleza reduce el estrés mental</li>
+            <li>La terapia es efectiva en el 80% de los casos</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <img src="static/info-mental.jpg" alt="Info Salud Mental" class="rounded-lg w-full" style="height:200px; object-fit:cover;" />
+      </div>
+
+      <!-- Form para agregar recursos de salud mental (lectura, meditación) -->
+      <div class="mt-4">
+        <h4 class="font-semibold">Agregar recurso (lectura / meditación)</h4>
+        <form id="mentalItemForm" class="mt-2 space-y-2">
+          <select id="mentalType" class="w-full p-2 border rounded">
+            <option value="lectura">Rutina de lectura</option>
+            <option value="meditacion">Horario de meditación</option>
+            <option value="otro">Otro recurso</option>
+          </select>
+          <input id="menTitle" type="text" placeholder="Título" class="w-full p-2 border rounded" required />
+          <input id="menImage" type="text" placeholder="URL de imagen (opcional)" class="w-full p-2 border rounded" />
+          <textarea id="menDetail" placeholder="Descripción / pasos" class="w-full p-2 border rounded" required></textarea>
+          <button type="submit" class="btn btn-primary">Guardar recurso</button>
+        </form>
+        <div id="listaMentalRecursos" class="mt-3 space-y-2"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Prevención -->
+  <section id="prevencion" class="max-w-6xl mx-auto p-6 space-y-4">
+    <button onclick="toggleContent('prevencionInfo')"
+      class="w-full text-left bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-4 py-3 rounded-xl shadow-md hover:shadow-xl transition-all">
+      🩺 Prevención y Bienestar
+    </button>
+    <div id="prevencionInfo" class="hidden-content bg-white rounded-xl shadow-lg mt-2">
+      <div class="info-grid">
+        <!-- Medidas Básicas -->
+        <div class="info-card">
+          <h3>🛡️ Medidas Preventivas Básicas</h3>
+          <ul class="tips-list">
+            <li>Lava tus manos con frecuencia</li>
+            <li>Vacúnate según tu esquema</li>
+            <li>Realiza chequeos médicos anuales</li>
+            <li>Evita el consumo excesivo de alcohol y tabaco</li>
+            <li>Mantén una buena higiene personal</li>
+          </ul>
+        </div>
+
+        <!-- Sugerencias -->
+        <div class="info-card">
+          <h3>💡 Consejos de Prevención</h3>
+          <ul class="tips-list">
+            <li>Usa protector solar diariamente</li>
+            <li>Mantén tus vacunas al día</li>
+            <li>Realiza autoexámenes regularmente</li>
+            <li>Duerme 7-8 horas diarias</li>
+            <li>Mantén tu hogar limpio y ventilado</li>
+          </ul>
+        </div>
+
+        <!-- Datos Importantes -->
+        <div class="info-card">
+          <h3>📊 Datos sobre Prevención</h3>
+          <ul class="tips-list">
+            <li>80% de enfermedades son prevenibles</li>
+            <li>Las vacunas salvan 2.5M de vidas al año</li>
+            <li>Lavarse las manos reduce infecciones 50%</li>
+            <li>Chequeos anuales detectan problemas temprano</li>
+            <li>Prevenir cuesta menos que curar</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+   
+  </section>
+
+  <!-- Bienestar -->
+  <section id="bienestar" class="max-w-6xl mx-auto p-6 space-y-4">
+    <button onclick="toggleContent('bienestarInfo')"
+      class="w-full text-left bg-gradient-to-r from-emerald-400 to-teal-500 text-white px-4 py-3 rounded-xl shadow-md hover:shadow-xl transition-all">
+      🌿 Bienestar Integral
+    </button>
+    <div id="bienestarInfo" class="hidden-content bg-white rounded-xl shadow-lg mt-2">
+      <div class="info-grid">
+        <!-- Pilares del Bienestar -->
+        <div class="info-card">
+          <h3>🌟 Pilares del Bienestar</h3>
+          <ul class="tips-list">
+            <li>Sueño reparador (7-9 horas)</li>
+            <li>Descanso activo y pausas</li>
+            <li>Balance emocional</li>
+            <li>Actividad física moderada</li>
+            <li>Conexión social significativa</li>
+          </ul>
+        </div>
+
+        <!-- Sugerencias -->
+        <div class="info-card">
+          <h3>💡 Consejos para el Bienestar</h3>
+          <ul class="tips-list">
+            <li>Practica la atención plena</li>
+            <li>Establece límites saludables</li>
+            <li>Cultiva hobbies y pasiones</li>
+            <li>Mantén un ambiente positivo</li>
+            <li>Dedica tiempo a la naturaleza</li>
+          </ul>
+        </div>
+
+        <!-- Datos Importantes -->
+        <div class="info-card">
+          <h3>📊 Datos sobre Bienestar</h3>
+          <ul class="tips-list">
+            <li>El bienestar mejora la productividad 31%</li>
+            <li>La naturaleza reduce el estrés 70%</li>
+            <li>Hobbies aumentan creatividad 50%</li>
+            <li>Relaciones sociales alargan la vida</li>
+            <li>Descansos mejoran concentración 45%</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Imágenes decorativas para Bienestar -->
+      <div class="section-images grid grid-cols-3 gap-4 mt-4">
+        <img src="static/bien1.jpeg" alt="Bienestar 1" class="rounded-lg shadow-sm" />
+        <img src="static/bien2.jpeg" alt="Bienestar 2" class="rounded-lg shadow-sm" />
+        <img src="static/bien3.jpeg" alt="Bienestar 3" class="rounded-lg shadow-sm" />
+      </div>
+    </div>
+  </section>
+
+  <!-- Sección personalizada -->
+  <section id="personal" class="max-w-6xl mx-auto p-6 catalog-section">
+    <h2 class="text-3xl font-bold text-green-700 text-center mb-6">🌿 Crea tu propio plan saludable</h2>
+    <div class="grid md:grid-cols-3 gap-6">
+      <!-- Rutinas -->
+      <div class="card">
+        <div class="mb-3">
+          <h3 class="text-xl font-semibold text-green-700 inline-flex items-center gap-2">🏋️ Tus Rutinas</h3>
+        </div>
+        <!-- Imagen decorativa para Rutinas (reemplaza la ruta) -->
+        <img src="static/rutina1.jpeg" alt="Rutina" class="col-image" />
+        <form id="rutinaForm" class="space-y-3">
+          <input id="nombreRutina" type="text" placeholder="Nombre de rutina" class="w-full p-3 border rounded-lg" required>
+          <textarea id="descripcionRutina" placeholder="Descripción o ejercicios..." class="w-full p-3 border rounded-lg" required></textarea>
+          <button type="submit" class="btn btn-primary">Agregar</button>
+        </form>
+        <div id="listaRutinas" class="mt-4 space-y-3"></div>
+      </div>
+
+      <!-- Planes -->
+      <div class="card">
+        <div class="mb-3">
+          <h3 class="text-xl font-semibold text-orange-600 inline-flex items-center gap-2">🍎 Tus Planes</h3>
+        </div>
+        <!-- Imagen decorativa para Planes (reemplaza la ruta) -->
+        <img src="static/rutina2.jpeg" alt="Planes" class="col-image" />
+        <form id="planForm" class="space-y-3">
+          <input id="nombrePlan" type="text" placeholder="Nombre del plan" class="w-full p-3 border rounded-lg" required>
+          <textarea id="detallePlan" placeholder="Detalle (comidas o pasos)" class="w-full p-3 border rounded-lg" required></textarea>
+          <button type="submit" class="btn btn-accent">Agregar</button>
+        </form>
+        <div id="planesContainer" class="mt-6"></div>
+      </div>
+
+      <!-- Horarios -->
+      <div class="card">
+        <div class="mb-3">
+          <h3 class="text-xl font-semibold text-blue-600 inline-flex items-center gap-2">🕒 Horarios</h3>
+        </div>
+        <!-- Imagen decorativa para Horarios (reemplaza la ruta) -->
+        <img src="static/rutina3.jpeg" alt="Horarios" class="col-image" />
+        <form id="horarioForm" class="space-y-3">
+          <input id="actividadHorario" type="text" placeholder="Actividad" class="w-full p-3 border rounded-lg" required>
+          <input id="horaHorario" type="time" class="w-full p-3 border rounded-lg" required>
+          <button type="submit" class="btn btn-blue">Agregar</button>
+        </form>
+        <div id="horariosContainer" class="mt-6"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⚖️ Calculadora IMC -->
+  <section id="imc" class="max-w-6xl mx-auto p-6">
+    <h2 class="text-3xl font-bold text-teal-700 text-center mb-6">
+      ⚖️ Calculadora de Peso Saludable (IMC)
+    </h2>
+    <div class="grid md:grid-cols-2 gap-8">
+      <!-- Formulario -->
+      <div class="bg-white p-6 rounded-xl shadow-lg">
+        <form id="imcForm" class="space-y-4">
+          <div class="space-y-4">
+            <div>
+              <label class="block font-semibold text-gray-700 mb-1">Altura (cm)</label>
+              <input id="altura" type="number" min="100" max="250" required 
+                class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+            </div>
+            <div>
+              <label class="block font-semibold text-gray-700 mb-1">Peso (kg)</label>
+              <input id="peso" type="number" min="20" max="250" required 
+                class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+            </div>
+            <div>
+              <label class="block font-semibold text-gray-700 mb-1">Edad</label>
+              <input id="edad" type="number" min="5" max="120" required 
+                class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+            </div>
+            <div>
+              <label class="block font-semibold text-gray-700 mb-1">Género</label>
+              <select id="genero" 
+                class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+                <option value="masculino">Masculino</option>
+                <option value="femenino">Femenino</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" 
+            class="w-full bg-gradient-to-r from-teal-500 to-green-500 text-white py-3 px-6 rounded-lg font-semibold hover:from-teal-600 hover:to-green-600 transition-all shadow-md hover:shadow-lg">
+            Calcular IMC
+          </button>
+        </form>
+      </div>
+
+      <!-- Resultados -->
+      <div id="resultadoIMC" class="bg-white p-6 rounded-xl shadow-lg hidden">
+        <div class="text-center space-y-4">
+          <div id="imcIcono" class="text-5xl mb-4">⚖️</div>
+          <h3 id="estadoIMC" class="text-2xl font-bold text-teal-700"></h3>
+          <p id="valorIMC" class="text-xl text-gray-700"></p>
+          <div id="imcGrafico" class="h-4 bg-gray-200 rounded-full overflow-hidden my-4">
+            <div id="imcIndicador" class="h-full transition-all duration-500"></div>
+          </div>
+          <p id="recomendacionIMC" class="text-gray-600 mt-4"></p>
+          <div id="imcTabla" class="mt-6 text-sm">
+            <div class="grid grid-cols-2 gap-2 text-left text-gray-600">
+              <div>Bajo peso: < 18.5</div>
+              <div>Normal: 18.5 - 24.9</div>
+              <div>Sobrepeso: 25 - 29.9</div>
+              <div>Obesidad: ≥ 30</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="bg-white mt-8 p-6 border-t text-center text-sm text-gray-600 shadow-inner">
+    Hecho con ❤️ para promover el ODS 3 — Salud y Bienestar
+  </footer>
+
+  <!-- Scripts globales -->
+  <script>
+    // Función para toggle de contenido
+    function toggleContent(id) {
+      console.log('Toggling content for:', id);
+      const element = document.getElementById(id);
+      if (!element) {
+        console.error('Elemento no encontrado:', id);
+        return;
+      }
+      if (element.classList.contains('show-content')) {
+        element.classList.remove('show-content');
+        element.classList.add('hidden-content');
+      } else {
+        element.classList.remove('hidden-content');
+        element.classList.add('show-content');
+      }
+    }
+
+    // Calculadora IMC
+    document.addEventListener('DOMContentLoaded', function() {
+      const imcForm = document.getElementById('imcForm');
+      const resultadoIMC = document.getElementById('resultadoIMC');
+      const estadoIMC = document.getElementById('estadoIMC');
+      const valorIMC = document.getElementById('valorIMC');
+      const recomendacionIMC = document.getElementById('recomendacionIMC');
+      const imcIndicador = document.getElementById('imcIndicador');
+      const imcIcono = document.getElementById('imcIcono');
+
+      if (imcForm) {
+        imcForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          const altura = parseFloat(document.getElementById('altura').value) / 100;
+          const peso = parseFloat(document.getElementById('peso').value);
+          const edad = parseInt(document.getElementById('edad').value);
+          const genero = document.getElementById('genero').value;
+
+          if (isNaN(altura) || isNaN(peso) || isNaN(edad)) {
+            alert('Por favor, ingresa valores numéricos válidos');
+            return;
+          }
+
+          const imc = peso / (altura * altura);
+          let estado = '', recomendacion = '', color = '', icono = '', width = '';
+
+          if (imc < 18.5) {
+            estado = 'Bajo peso';
+            recomendacion = 'Necesitas aumentar tu ingesta calórica de forma saludable y consultar con un nutricionista para un plan personalizado.';
+            color = 'bg-blue-500';
+            icono = '⚠️';
+            width = '20%';
+          } else if (imc < 24.9) {
+            estado = 'Peso saludable';
+            recomendacion = '¡Excelente! Mantén tus hábitos de alimentación y ejercicio. Continúa con un estilo de vida activo.';
+            color = 'bg-green-500';
+            icono = '✅';
+            width = '40%';
+          } else if (imc < 29.9) {
+            estado = 'Sobrepeso';
+            recomendacion = 'Considera hacer más ejercicio y ajustar tu dieta. Un profesional puede ayudarte a crear un plan efectivo.';
+            color = 'bg-yellow-500';
+            icono = '⚠️';
+            width = '60%';
+          } else {
+            estado = 'Obesidad';
+            recomendacion = 'Es importante consultar con un profesional de la salud para recibir orientación personalizada y comenzar un plan de acción.';
+            color = 'bg-red-500';
+            icono = '⛔';
+            width = '80%';
+          }
+
+          // Añadir recomendaciones específicas por edad y género
+          if (edad < 18) {
+            recomendacion += ' Ten en cuenta que el IMC en menores de edad debe ser evaluado por un pediatra.';
+          }
+          if (edad > 65) {
+            recomendacion += ' Para adultos mayores, es importante mantener un seguimiento regular con su médico.';
+          }
+
+          // Actualizar la interfaz
+          estadoIMC.textContent = estado;
+          valorIMC.textContent = `IMC: ${imc.toFixed(1)} kg/m²`;
+          recomendacionIMC.textContent = recomendacion;
+          imcIcono.textContent = icono;
+
+          // Actualizar el indicador visual
+          imcIndicador.className = color + ' h-full transition-all duration-500';
+          imcIndicador.style.width = width;
+
+          // Mostrar resultados con una animación suave
+          resultadoIMC.classList.remove('hidden');
+          resultadoIMC.classList.add('animate-fade-in');
+
+          // Hacer scroll suave hasta los resultados
+          resultadoIMC.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+      }
+    });
+  </script>
+
+  <!-- Scripts -->
+  <script>
+
+    // --- Sin Firebase: almacenamiento local para rutinas, planes y horarios ---
+    (function(){
+      console.log('localStorage script loaded');
+      // Helpers de localStorage
+      function getItems(col) {
+        try { return JSON.parse(localStorage.getItem(col) || '[]'); } catch(e){ return []; }
+      }
+      function saveItems(col, items) {
+        localStorage.setItem(col, JSON.stringify(items));
+      }
+      function makeId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+      // CRUD simple
+      function addItem(col, data) {
+        const items = getItems(col);
+        const newItem = { id: makeId(), ...data, fecha: new Date().toISOString() };
+        items.unshift(newItem);
+        saveItems(col, items);
+        console.log('addItem:', col, newItem);
+      }
+      // Toast helper (local)
+      function ensureToastContainer(){
+        let c = document.querySelector('.toast-container');
+        if(!c){ c = document.createElement('div'); c.className = 'toast-container'; document.body.appendChild(c); }
+        return c;
+      }
+      function showToast(message, type='success', timeout=3000){
+        try{
+          const container = ensureToastContainer();
+          const t = document.createElement('div');
+          t.className = 'toast ' + (type||'success');
+          const icon = type === 'success' ? '✅' : (type === 'error' ? '❌' : '⚠️');
+          t.innerHTML = `<span class="icon">${icon}</span><span class="msg">${message}</span>`;
+          container.appendChild(t);
+          // force reflow to enable transition
+          void t.offsetWidth;
+          t.classList.add('show');
+          setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=> t.remove(), 300); }, timeout);
+        }catch(e){ console.log('showToast error', e); }
+      }
+      function removeItem(col, id) {
+        const items = getItems(col).filter(i => i.id !== id);
+        saveItems(col, items);
+      }
+
+      // Renderizado genérico a uno o varios contenedores
+      function renderCollection(col, containers, templateFn) {
+        const items = getItems(col);
+        containers.forEach(cid => {
+          const el = document.getElementById(cid);
+          if (!el) return;
+          if (!items.length) {
+            el.innerHTML = '<p class="text-gray-500 text-center p-4">No hay elementos guardados</p>';
+            return;
+          }
+          el.innerHTML = items.map(it => templateFn(it)).join('');
+        });
+      }
+
+      // Templates
+      function tmplRutina(r){
+        return `<div class="rutina-card"><h3>${escapeHtml(r.nombre)}</h3><p>${escapeHtml(r.descripcion)}</p><small>${new Date(r.fecha).toLocaleString()}</small><div class="mt-2"><button class="btn btn-red" onclick="eliminarDocumentoLocal('rutinas','${r.id}')">Eliminar</button></div></div>`;
+      }
+      function tmplPlan(p){
+        return `<div class="plan-card"><h3>${escapeHtml(p.nombre)}</h3><p>${escapeHtml(p.detalle)}</p><small>${new Date(p.fecha).toLocaleString()}</small><div class="mt-2"><button class="btn btn-red" onclick="eliminarDocumentoLocal('planes','${p.id}')">Eliminar</button></div></div>`;
+      }
+      function tmplHorario(h){
+        return `<div class="horario-card"><h3>${escapeHtml(h.actividad)}</h3><p>Hora: ${escapeHtml(h.hora)}</p><small>${new Date(h.fecha).toLocaleString()}</small><div class="mt-2"><button class="btn btn-red" onclick="eliminarDocumentoLocal('horarios','${h.id}')">Eliminar</button></div></div>`;
+      }
+
+      // Escape básico
+      function escapeHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+      // Renderizadores concretos
+      function renderRutinas(){ renderCollection('rutinas', ['rutinasContainer','listaRutinas'], tmplRutina); }
+      function renderPlanes(){ renderCollection('planes', ['planesContainer','listaPlanes'], tmplPlan); }
+      function renderHorarios(){ renderCollection('horarios', ['horariosContainer','listaHorarios'], tmplHorario); }
+
+      // Extras (ejercicio/alimentacion/mental) usan las mismas colecciones si existen
+      function renderEjercicioExtras(){ renderCollection('rutinas_ejercicio', ['listaEjercicioExtras'], i => `<div class="p-2 rounded bg-gray-50 shadow-sm relative"><h5 class="font-semibold">${escapeHtml(i.titulo)}</h5><p class="text-sm">${escapeHtml(i.detalle)}</p>${i.imagen?`<img src="${escapeHtml(i.imagen)}" class="w-full mt-2 rounded">`:''}<button onclick="eliminarDocumentoLocal('rutinas_ejercicio','${i.id}')" class="absolute top-2 right-2 bg-red-500 text-white px-2 py-0.5 rounded text-xs">Eliminar</button></div>`); }
+      function renderAlimentacionExtras(){ renderCollection('planes_alimentacion', ['listaAlimentacionExtras'], i => `<div class="p-2 rounded bg-gray-50 shadow-sm relative"><h5 class="font-semibold">${escapeHtml(i.titulo)}</h5><p class="text-sm">${escapeHtml(i.detalle)}</p>${i.imagen?`<img src="${escapeHtml(i.imagen)}" class="w-full mt-2 rounded">`:''}<button onclick="eliminarDocumentoLocal('planes_alimentacion','${i.id}')" class="absolute top-2 right-2 bg-red-500 text-white px-2 py-0.5 rounded text-xs">Eliminar</button></div>`); }
+      function renderMentalRecursos(){ renderCollection('mental_recursos', ['listaMentalRecursos'], i => `<div class="p-2 rounded bg-gray-50 shadow-sm relative"><strong>${escapeHtml(i.tipo)}</strong> — <span class="font-semibold">${escapeHtml(i.titulo)}</span><p class="text-sm">${escapeHtml(i.detalle)}</p>${i.imagen?`<img src="${escapeHtml(i.imagen)}" class="w-full mt-2 rounded">`:''}<button onclick="eliminarDocumentoLocal('mental_recursos','${i.id}')" class="absolute top-2 right-2 bg-red-500 text-white px-2 py-0.5 rounded text-xs">Eliminar</button></div>`); }
+
+      // Exponer función de eliminación global (reemplaza eliminarDocumento con versión local)
+      window.eliminarDocumentoLocal = function(col, id){
+        removeItem(col, id);
+        renderAll();
+        showToast('Elemento eliminado', 'error');
+      };
+
+      function renderAll(){ renderRutinas(); renderPlanes(); renderHorarios(); renderEjercicioExtras(); renderAlimentacionExtras(); renderMentalRecursos(); }
+
+      // Conectar formularios al DOM
+      document.addEventListener('DOMContentLoaded', function(){
+        // Rutina
+        const rutinaForm = document.getElementById('rutinaForm');
+        if(rutinaForm){
+          rutinaForm.addEventListener('submit', function(e){
+            e.preventDefault();
+            const nombre = document.getElementById('nombreRutina')?.value || '';
+            const descripcion = document.getElementById('descripcionRutina')?.value || '';
+            console.log('rutinaForm submit', { nombre, descripcion });
+            if(!nombre.trim()){ alert('Ingresa un nombre para la rutina'); return; }
+            addItem('rutinas',{ nombre:nombre.trim(), descripcion: descripcion.trim() });
+            rutinaForm.reset();
+            renderRutinas();
+            showToast('Rutina guardada', 'success');
+          });
+        }
+
+        // Plan
+        const planForm = document.getElementById('planForm');
+        if(planForm){
+          planForm.addEventListener('submit', function(e){
+            e.preventDefault();
+            const nombre = document.getElementById('nombrePlan')?.value || '';
+            const detalle = document.getElementById('detallePlan')?.value || '';
+            console.log('planForm submit', { nombre, detalle });
+            if(!nombre.trim()){ alert('Ingresa un nombre para el plan'); return; }
+            addItem('planes',{ nombre:nombre.trim(), detalle: detalle.trim() });
+            planForm.reset();
+            renderPlanes();
+            showToast('Plan guardado', 'success');
+          });
+        }
+
+        // Horario
+        const horarioForm = document.getElementById('horarioForm');
+        if(horarioForm){
+          horarioForm.addEventListener('submit', function(e){
+            e.preventDefault();
+            const actividad = document.getElementById('actividadHorario')?.value || '';
+            const hora = document.getElementById('horaHorario')?.value || '';
+            console.log('horarioForm submit', { actividad, hora });
+            if(!actividad.trim()){ alert('Ingresa una actividad'); return; }
+            addItem('horarios',{ actividad:actividad.trim(), hora });
+            horarioForm.reset();
+            renderHorarios();
+            showToast('Horario guardado', 'success');
+          });
+        }
+
+        // Extras: ejercicio
+        const ejercicioItemForm = document.getElementById('ejercicioItemForm');
+        if(ejercicioItemForm){
+          ejercicioItemForm.addEventListener('submit', function(e){
+            e.preventDefault();
+            const titulo = document.getElementById('ejTitle')?.value || '';
+            const detalle = document.getElementById('ejDetail')?.value || '';
+            const imagen = document.getElementById('ejImage')?.value || '';
+            console.log('ejercicioItemForm submit', { titulo, detalle, imagen });
+            if(!titulo.trim()){ alert('Ingresa un título'); return; }
+            addItem('rutinas_ejercicio',{ titulo:titulo.trim(), detalle:detalle.trim(), imagen:imagen.trim() });
+            ejercicioItemForm.reset();
+            renderEjercicioExtras();
+            showToast('Recurso de ejercicio guardado', 'success');
+          });
+        }
+
+        // Extras: alimentacion
+        const alimentacionItemForm = document.getElementById('alimentacionItemForm');
+        if(alimentacionItemForm){
+          alimentacionItemForm.addEventListener('submit', function(e){
+            e.preventDefault();
+            const titulo = document.getElementById('alTitle')?.value || '';
+            const detalle = document.getElementById('alDetail')?.value || '';
+            const imagen = document.getElementById('alImage')?.value || '';
+            console.log('alimentacionItemForm submit', { titulo, detalle, imagen });
+            if(!titulo.trim()){ alert('Ingresa un título'); return; }
+            addItem('planes_alimentacion',{ titulo:titulo.trim(), detalle:detalle.trim(), imagen:imagen.trim() });
+            alimentacionItemForm.reset();
+            renderAlimentacionExtras();
+            showToast('Recurso de alimentación guardado', 'success');
+          });
+        }
+
+        // Extras: mental
+        const mentalItemForm = document.getElementById('mentalItemForm');
+        if(mentalItemForm){
+          mentalItemForm.addEventListener('submit', function(e){
+            e.preventDefault();
+            const tipo = document.getElementById('mentalType')?.value || '';
+            const titulo = document.getElementById('menTitle')?.value || '';
+            const detalle = document.getElementById('menDetail')?.value || '';
+            const imagen = document.getElementById('menImage')?.value || '';
+            console.log('mentalItemForm submit', { tipo, titulo, detalle, imagen });
+            if(!titulo.trim()){ alert('Ingresa un título'); return; }
+            addItem('mental_recursos',{ tipo:tipo, titulo:titulo.trim(), detalle:detalle.trim(), imagen:imagen.trim() });
+            mentalItemForm.reset();
+            renderMentalRecursos();
+            showToast('Recurso mental guardado', 'success');
+          });
+        }
+
+        // Render inicial
+        renderAll();
+      });
+
+      // Exponer funciones necesarias en window por si se llaman desde HTML
+      window.renderAllLocal = renderAll;
+      window.addItemLocal = addItem;
+      window.removeItemLocal = removeItem;
+
+    })();
+  </script>
+
+</body>
+</html>
